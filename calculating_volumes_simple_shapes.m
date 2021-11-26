@@ -2,34 +2,34 @@ rng('shuffle');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %the possible M(x)'s for which we want plots
 square=true;%M(x)\leq r is an infinity ball radius r centered at .5 times the ones vector
-rectangle_then_square=true;%for a parameter 'level' (defined later on),  M(x)\leq r is 
+rectangle_then_square=false;%for a parameter 'level' (defined later on),  M(x)\leq r is 
                             %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*level and the other side lengths 2*r
                             %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
-rectangle_then_square_nonlinear=true;% %for a parameter 'level' (defined later on),  M(x)\leq r is
+rectangle_then_square_nonlinear=false;% %for a parameter 'level' (defined later on),  M(x)\leq r is
                             %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*(r*(1-level)+r^2) and the other side lengths 2*r. The side length 2*(r*(1-level)+r^2) was chosen to make the volume continuous but nonlinear on [0,level]
                             %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
-disks90=true;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
-disks60=true;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
+disks90=false;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
+disks60=false;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for plots
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
-plot_sample_coordinates=false; %do you want to see the plot of the first two coordinates of the samples?
+plot_sample_coordinates=true; %do you want to see the plot of the first two coordinates of the samples?
 plot_histograms=true; %do you want to see a histogram of the rs?
-rejection_rates=false; %do you want to see a histogram of rejection rates?
-fig_numbering=2; %matlab starts numbering figures at this number
+rejection_rates=true; %do you want to see a histogram of rejection rates?
+fig_numbering=1; %matlab starts numbering figures at this number
 save_figures=false;%if we want to save the figures
 folder='simple_volumes_figures';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %the following variables toggle which methods we will be comparing
-uniform_method=false; %uniform W
+uniform_method=true; %uniform W
 inverse_derivative_method=true; %weight function proportional to inverse derivative
-antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights
-adaptive_antiderivative_inverse_volume_method=false;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
-wang_landau_method=false;%if we want to include the wang-landau method
-joint_method=false;%if we want to include the method that samples in the joint distribution
+antiderivative_inverse_volume_method=true; %weight function proportional to the antiderivative of the inverse weights
+adaptive_antiderivative_inverse_volume_method=true;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
+wang_landau_method=true;%if we want to include the wang-landau method
+joint_method=true;%if we want to include the method that samples in the joint distribution
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for methods-- one we may want to change
@@ -40,7 +40,7 @@ burn_in=100;%burn_in_time
 reps=10;%number of repetitions
 step_size=1; %note--optimal for wang-landau in 2d seems to be .1
 level=.3;%for the rectangle_then_square/rectangle_then_square_nonlinear shapes, the r at which M(x)\leq r switches from being a rectangle to a square
-forget_rate_anti_adaptive=10^-8*ones(length(M_function_list),1);%rate parameter for the inverse volumes method
+forget_rate_anti_adaptive=10^-8;%rate parameter for the inverse volumes method
 p=0.1;%rate of changing r in joint distribution.
 fixed_bins=true;%if we want a fixed number of bins in our histograms
 num_bins=15;% the number of bins we want in our histograms
@@ -115,38 +115,53 @@ end
 %labeling our methods
 tags={};
 title_tags={};
+total_methods=1+uniform_method+inverse_derivative_method+antiderivative_inverse_volume_method+adaptive_antiderivative_inverse_volume_method+wang_landau_method+joint_method;
+all_colors=getColorSet(total_methods);
+exact_volume_color=all_colors(1,:);
+color_index=2;
+colors=zeros(0,3);
 if uniform_method
    len=length(tags);
    tags{len+1}='uniform';
    title_tags{len+1}='uniform weights';
+   colors(len+1,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
 if inverse_derivative_method
    len=length(tags);
    tags{len+1}='inverse_derivative';
    title_tags{len+1}='inverse derivative weights';
+   colors(len+1,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
 if antiderivative_inverse_volume_method
    len=length(tags);
    tags{len+1}='anti_inverse_volume';
    title_tags{len+1}='integral inverse volume weights';
+   colors(len+1,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
 if adaptive_antiderivative_inverse_volume_method
    len=length(tags);
    tags{len+1}='adaptive_anti_inverse_volume';
    title_tags{len+1}='adaptive integral inverse volume';
+   colors(len+1,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
 if wang_landau_method
     len=length(tags);
     tags{len+1}='wang_landau';
     title_tags{len+1}='Wang-Landau method';
+    colors(len+1,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
 if joint_method
     len=length(tags);
     tags{len+1}='joint';
     title_tags{len+1}='joint distribution';
+    colors(len+1,:)=all_colors(color_index,:);
 end
     
-colors={'k','b','m','r','c','y'}; %plot each method in a diffferent color
 
 
 
@@ -359,7 +374,7 @@ for j=1:length(M_function_list)
                 volume_inverse_derivative_list(:,i)=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_derivative,r);
             end
             if adaptive_antiderivative_inverse_volume_method
-                volume_adaptive_anti_inverse_volume_list(:,i)=volume_adaptive_integral_inverse_volumes(N,burn_in,increasing,x0,next, start_coordinates,  proposal, @H,r,dist,plot_sample_coordinates,reference_volume,forget_rate_anti_adaptive(j), w0);
+                volume_adaptive_anti_inverse_volume_list(:,i)=volume_adaptive_integral_inverse_volumes(N,burn_in,increasing,x0,next, start_coordinates,  proposal, @H,r,dist,plot_sample_coordinates,reference_volume,forget_rate_anti_adaptive, w0);
             end
             if wang_landau_method
                 volume_wang_landau_list(:,i)=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume, plot_sample_coordinates,log_scale_calculations);
@@ -378,7 +393,7 @@ for j=1:length(M_function_list)
                 [volume_inverse_derivative_list(:,i),samples_inverse_derivative(:,((i-1)*N+1):(i*N)),~,~,accepted_inverse_derivative(((i-1)*N+1):(i*N))]=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, true,reference_volume,inverse_derivative,r);
             end
             if adaptive_antiderivative_inverse_volume_method
-                [volume_adaptive_anti_inverse_volume_list(:,i),~,~,samples_adaptive_anti_inverse_volume(:,((i-1)*N+1):(i*N)),accepted_adaptive_anti_inverse_volume(((i-1)*N+1):(i*N))]=volume_adaptive_integral_inverse_volumes(N,burn_in,increasing, x0,next, start_coordinates,  proposal, @H,r,dist,true,reference_volume,forget_rate_anti_adaptive(j), w0);                                                                                                         
+                [volume_adaptive_anti_inverse_volume_list(:,i),~,~,samples_adaptive_anti_inverse_volume(:,((i-1)*N+1):(i*N)),accepted_adaptive_anti_inverse_volume(((i-1)*N+1):(i*N))]=volume_adaptive_integral_inverse_volumes(N,burn_in,increasing, x0,next, start_coordinates,  proposal, @H,r,dist,true,reference_volume,forget_rate_anti_adaptive, w0);                                                                                                         
             end
             if wang_landau_method
                 [volume_wang_landau_list(:,i),samples_wang_landau(:,((i-1)*N+1):(i*N)), accepted_wang_landau(((i-1)*N+1):(i*N)),~]=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume,true,log_scale_calculations);
@@ -403,12 +418,15 @@ for j=1:length(M_function_list)
    if volume_vs_r
       fig=figure(fig_numbering);
       plot_handles=gobjects(length(tags)+1,1);
-      plot_handles(1)=plot(r, exact_volumes,'Color','green');
+      plot_handles(1)=plot(r, exact_volumes,'Color',exact_volume_color);
       hold on;
       for k=1:length(tags)
-         plot_handles(k+1)=plot(r,means(:,k),colors{k});
+         plot_handles(k+1)=plot(r,means(:,k),'Color', colors(k,:));
          hold on;
-         plot(r,means(:,k)-2*sds(:,k),strcat(colors{k},'--'),r,means(:,k)+2*sds(:,k),strcat(colors{k},'--'));
+         %plot(r,means(:,k)-2*sds(:,k),'Color',colors(k,:),'LineStyle', '--',r,means(:,k)+2*sds(:,k),'Color',colors(k,:),'LineStyle', '--');
+         plot(r,means(:,k)-2*sds(:,k),'Color',colors(k,:),'LineStyle', '--');
+         hold on;
+         plot(r,means(:,k)+2*sds(:,k),'Color',colors(k,:),'LineStyle', '--');
          hold on;
       end
         if increasing
@@ -436,12 +454,13 @@ for j=1:length(M_function_list)
    %plotting the first two coordinates of the samples
    if plot_sample_coordinates
        fig=figure(fig_numbering);
+       
        for k=1:length(tags)
            samples=eval(strcat('samples_', tags{k}));
            %subplot(1,length(tags),k)
            root_ceil=ceil(sqrt(length(tags)));
            subplot(root_ceil,root_ceil,k);
-           scatter(samples(1,:),samples(2,:),1,'Marker','.')
+           scatter(samples(1,:),samples(2,:),1,'Marker','.','MarkerFaceColor',[0, 0.4470, 0.7410],'MarkerEdgeColor',[0, 0.4470, 0.7410])
            title(title_tags{k});
            hold on; 
        end
@@ -480,10 +499,11 @@ for j=1:length(M_function_list)
        for k=1:length(tags)
            subplot(1,length(tags),k)
            if ~fixed_bins
-               histogram(dsts(:,k),'Normalization','pdf');
+               hst=histogram(dsts(:,k),'Normalization','pdf');
            else
-               histogram(dsts(:,k),num_bins,'Normalization','pdf');
+               hst=histogram(dsts(:,k),num_bins,'Normalization','pdf');
            end
+           hst.FaceColor=[0, 0.4470, 0.7410];
           
            title(title_tags{k});
            xlabel('r-values');
@@ -506,10 +526,11 @@ for j=1:length(M_function_list)
            accepted=eval(name_acc);
            subplot(1,length(tags),k)
            if ~fixed_bins
-               histogram(dsts(~accepted,k),'Normalization','count');
+               hst=histogram(dsts(~accepted,k),'Normalization','count');
            else
-               histogram(dsts(~accepted,k),num_bins,'Normalization','count');
+               hst=histogram(dsts(~accepted,k),num_bins,'Normalization','count');
            end
+           hst.FaceColor=[0, 0.4470, 0.7410];
            title(title_tags{k});
            xlabel('r-values');
            ylabel('rejection rate');
