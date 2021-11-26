@@ -1,65 +1,67 @@
 rng('shuffle');
-%M-functions for methods
-level=.3;%point of discontinuity in the derivative in the second two shapes below
-sq_handle=@(x)square(x);%this outputs |x-c|_infty where c=.5[1,1]
-rect_square_handle=@(x)rect_then_square_cont(x,level);% let c=.5[1.1]. If |x(1)-c(1)|<=level, it outputs |x(2)-c(2)| and otherwise this outputs |x-c|_\infty
-rect_square_nonlinear_handle=@(x)rect_then_square_cont_nonlinear(x,level);%similar to the previous function, but this is cooked up to be nonlinear for |x(1)-c(1)| between 0 and level
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%the possible M(x)'s for which we want plots
+square=true;%M(x)\leq r is an infinity ball radius r centered at .5 times the ones vector
+rectangle_then_square=true;%for a parameter 'level' (defined later on),  M(x)\leq r is 
+                            %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*level and the other side lengths 2*r
+                            %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
+rectangle_then_square_nonlinear=true;% %for a parameter 'level' (defined later on),  M(x)\leq r is
+                            %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*(r*(1-level)+r^2) and the other side lengths 2*r. The side length 2*(r*(1-level)+r^2) was chosen to make the volume continuous but nonlinear on [0,level]
+                            %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
+disks90=true;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
+disks60=true;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
 
-
-
-%the list of M-functions for which we want plots
-
-
-%M_function_list={sq_handle,rect_square_handle, rect_square_nonlinear_handle, @dist_90, @dist_60};
-%shape_names={'square', 'rectangle then square', 'rectangle then square nonlinear','disks90','disks60'};%gives each shape a name. Very important to make sure order of names is same order as order of function handles!
-%M_function_list={sq_handle};
-%shape_names={'square'};
-%M_function_list={@dist_90};
-%shape_names={'disks90'};
-M_function_list={@dist_60};
-shape_names={'disks60'};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for plots
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
-plot_sample_coordinates=true; %do you want to see the plot of the first two coordinates of the samples?
+plot_sample_coordinates=false; %do you want to see the plot of the first two coordinates of the samples?
 plot_histograms=true; %do you want to see a histogram of the rs?
-rejection_rates=true; %do you want to see a histogram of rejection rates?
+rejection_rates=false; %do you want to see a histogram of rejection rates?
 fig_numbering=2; %matlab starts numbering figures at this number
-save_figures=true;%if we want to save the figures
-folder='plots_and_data\Simple_Volumes_Figures';
+save_figures=false;%if we want to save the figures
+folder='simple_volumes_figures';
 
-
-%the following variables determine which methods we will be comparing
-uniform_method=true; %uniform W
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%the following variables toggle which methods we will be comparing
+uniform_method=false; %uniform W
 inverse_derivative_method=true; %weight function proportional to inverse derivative
-antiderivative_inverse_volume_method=true; %weight function proportional to the antiderivative of the inverse weights
-adaptive_antiderivative_inverse_volume_method=true;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
-wang_landau_method=true;%if we want to include the wang-landau method
-joint_method=true;%if we want to include the method that samples in the joint distribution
+antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights
+adaptive_antiderivative_inverse_volume_method=false;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
+wang_landau_method=false;%if we want to include the wang-landau method
+joint_method=false;%if we want to include the method that samples in the joint distribution
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for methods-- one we may want to change
 d=4;%the dimension
 num_points=51;%number of points in our discretization
 N=1000;%number of samples
 burn_in=100;%burn_in_time
 reps=10;%number of repetitions
-next=@(k)nxt(k,d);%picking the next coordinates to move in gibbs samplers
-start_coordinates=[1,2];%the first coordinates to move in gibbs samplers
 step_size=1; %note--optimal for wang-landau in 2d seems to be .1
+level=.3;%for the rectangle_then_square/rectangle_then_square_nonlinear shapes, the r at which M(x)\leq r switches from being a rectangle to a square
 forget_rate_anti_adaptive=10^-8*ones(length(M_function_list),1);%rate parameter for the inverse volumes method
 p=0.1;%rate of changing r in joint distribution.
 fixed_bins=true;%if we want a fixed number of bins in our histograms
 num_bins=15;% the number of bins we want in our histograms
 
 
-%most parameters you want to change should be above this line
+
+%parameters you want to change are probably above this line
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %parameters for methods that we probably don't want to change around
 proposal=@(x,k) step_proposal(x,k,step_size);%the proposal function
+
+%for proposing which coordinates to move
+next=@(k)nxt(k,d);%picking the next coordinates to move in gibbs samplers
+start_coordinates=[1,2];%the first coordinates to move in gibbs samplers
+
 
 %some extra parameters for the Wang-Landau method
 WL_dist_discrete=false;%if we want to use the discrete version of the WL method
@@ -72,8 +74,44 @@ f_update=@(f,g,N,Hist,r,dst,other)f_update_optimal(f,g,N,Hist,r,dst,other,log_sc
 %weight parameters for our methods
 W_uniform=ones(num_points,1);%uniform weights
 w0=ones(num_points,1); %starting point for adaptive weights
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+parent_folder='plots_and_data';%we put the directory 'folder' in this directory
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%listing the M-functions which determine our shapes and the shape names
+
+%handles for our shapes
+square_handle=@(x)square_function(x);
+rect_square_handle=@(x)rect_then_square(x,level);
+rect_square_nonlinear_handle=@(x)rect_then_square_nonlinear(x,level);
+
+M_function_list={};
+shape_names={};
+if square
+    len=length(shape_names);
+    M_function_list{len+1}=square_handle;
+    shape_names{len+1}='square';
+end
+if rectangle_then_square
+    len=length(shape_names);
+    M_function_list{len+1}=rect_square_handle;
+    shape_names{len+1}='rectangle then square';
+end
+if rectangle_then_square_nonlinear
+    len=length(shape_names);
+    M_function_list{len+1}=rect_square_nonlinear_handle;
+    shape_names{len+1}='rectangle then square nonlinear';
+end
+if disks90
+    len=length(shape_names);
+    M_function_list{len+1}=@dist_90;
+    shape_names{len+1}='disks90';
+end
+if disks60
+    len=length(shape_names);
+    M_function_list{len+1}=@dist_60;
+    shape_names{len+1}='disks60';
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %labeling our methods
 tags={};
 title_tags={};
@@ -189,8 +227,13 @@ if rejection_rates
        accepted_joint=false(N*reps,1);
    end
 end
-if ~exist(folder, 'dir')
-    mkdir(folder)
+
+if ~isfolder(parent_folder)
+    mkdir(parent_folder);
+end
+folder=strcat(parent_folder,'\',folder);%TODO check that this line also runs on unix
+if ~isfolder(folder)
+    mkdir(parent_folder, folder);
 end
 
 for j=1:length(M_function_list)
@@ -198,31 +241,33 @@ for j=1:length(M_function_list)
    exact_volumes=zeros(num_points,1);
    volume_derivative=zeros(num_points,1);
    %variables unique for each shape
-   if isequal(dist,sq_handle)
-       reference_volume=1;%reference volume
+   if isequal(dist,square_handle)
+      reference_volume=1;%reference volume
       r=linspace(0,0.5,num_points)'; %discretizing radiuses
-      up=true;
+      up=true;%our reference volume is the largest shape
       increasing=true;
       exact_volumes=(2*r).^d;
       inverse_volume_weights=r.^(-d+1);
       volume_derivative=2*d*(2*r).^(d-1);
-      R_lim=[0,1/2];
+      r_lim=[0,1/2];%upper and lower limits on r
    elseif isequal(dist,rect_square_handle)
        reference_volume=1;%reference volume
        r=linspace(0,0.5,num_points)'; %discretizing radiuses
-       up=true;
+       up=true;%our reference volume is the largest volume
        increasing=true;
-        ind=r<=(level);
-        exact_volumes(ind)=(2*level).*(2*(r(ind))).^(d-1);
-        volume_derivative(ind)=(2*level)*2*(d-1)*(2*r(ind)).^(d-2);
-        exact_volumes(~ind)=(2*(r(~ind))).^d;
-        volume_derivative(~ind)=2*d*(2*r(~ind)).^(d-1);
-        R_lim=[0,1/2];
+       ind=r<=(level);
+       %calculating the exact volumes and volume derivatives
+       exact_volumes(ind)=(2*level).*(2*(r(ind))).^(d-1);
+       volume_derivative(ind)=(2*level)*2*(d-1)*(2*r(ind)).^(d-2);
+       exact_volumes(~ind)=(2*(r(~ind))).^d;
+       volume_derivative(~ind)=2*d*(2*r(~ind)).^(d-1);
+       r_lim=[0,1/2];%upper and lower limits on r
    elseif isequal(dist,rect_square_nonlinear_handle)
        reference_volume=1;%reference volume
        r=linspace(0,0.5,num_points)'; %discretizing radiuses
-       up=true;
+       up=true;%our reference volume is the largest volume
        increasing=true;
+       %calculating the exact volumes and volume derivatives
        k=1-level;
        r_2=r.^2+k*r;
        vol_rect=(2*r).^(d-1).*(2*r_2);
@@ -235,16 +280,17 @@ for j=1:length(M_function_list)
        exact_volumes=min(exact_volumes,1);
        volume_derivative(ind)=volume_rectangle_derivative(ind);
        volume_derivative(~ind)=volume_square_derivative(~ind);
-       R_lim=[0,1/2];
+       r_lim=[0,1/2];%upper and lower limits on r
    elseif isequal(dist, @dist_90)
        reference_volume=1;%reference volume
-       if d~=4
+       r_max=sqrt(2)/4;%discretizing the radiuses
+       r=linspace(0,r_max,num_points)';
+       if d~=4%the exact volumes are implemented only for 2 disks
            error('for disks in a torus, exact volumes only known for 2 disks')
        end
-       up=true;
+       up=true;%our reference volume is the largest volume
        increasing=false;
-       r_max=sqrt(2)/4;
-       r=linspace(0,r_max,num_points)';
+       %calculating the exact volumes and volume derivatives
        ind=r>1/4;
        exact_volumes(~ind)=1-4*pi*r(~ind).^2;
        exact_volumes(ind)=1-4*pi*r(ind).^2+16*r(ind).^2 .*acos(1./(4*r(ind)))-sqrt(16*r(ind).^2-1);
@@ -252,25 +298,27 @@ for j=1:length(M_function_list)
        r_above=r(ind);
        volume_derivative(ind)= volume_derivative(ind)-32*r_above.*acos(1./(4*r_above))-4./sqrt(1-1./(4*r_above).^2)+16*r_above./sqrt(16*r_above.^2-1);
        volume_derivative=max(volume_derivative,0);
-       R_lim=[0,r_max];
+       r_lim=[0,r_max];%upper and lower limits on r
    elseif isequal(dist,@dist_60)
        reference_volume=sqrt(3)/2;%reference volume
-        if d~=4
+       if d~=4
            error('for disks in a torus, exact volumes only known for 2 disks')
        end
-       up=true;
+       up=true;%the exact volumes are implemented only for 2 disks
        increasing=false;
        [xs,rads] = get_rigid_configurations(d/2,'radius','tor60_on_90');
-       x0=xs(:,1);
        r_max=max(rads);
-       r=linspace(0,r_max,num_points)';
+       r=linspace(0,r_max,num_points)';%discretizing radiuses
+       %calculating the exact volumes and volume derivatives
        ind=r>1/4;
        exact_volumes(~ind)=sqrt(3)/2-4*pi*r(~ind).^2;
        exact_volumes(ind)=sqrt(3)/2-4*pi*r(ind).^2+3/2*(16*r(ind).^2 .*acos(1./(4*r(ind)))-sqrt(16*r(ind).^2-1));
        volume_derivative= 8*pi*r;
        r_above=r(ind);
        volume_derivative(ind)=volume_derivative(ind)+3/2*(-32*r_above.*acos(1./(4*r_above))-4./sqrt(1-1./(4*r_above).^2)+16*r_above./sqrt(16*r_above.^2-1));
-       R_lim=[0,r_max];
+       volume_derivative(1)=0;
+       volume_derivative(num_points)=0;
+       r_lim=[0,r_max];%limits on r
    end
    if WL_dist_discrete
         wdist=@(x)discretize(dist(x),r);
@@ -279,22 +327,22 @@ for j=1:length(M_function_list)
    end
    inverse_derivative=1./volume_derivative;
    q_weights=non_uniform_trapezoidal_weights(r);
-   inv_vol=1./exact_volumes;
-   indd=inv_vol==inf;
-   inv_vol(indd)=max(inv_vol(~indd))*2;
+   inverse_volumes=1./exact_volumes;
+   indd=inverse_volumes==inf;
+   inverse_volumes(indd)=max(inverse_volumes(~indd))*2;
    if increasing
-      inverse_volume_weights=flip(cumsum(q_weights./flip(inv_vol)));
+      inverse_volume_weights=flip(cumsum(q_weights./flip(inverse_volumes)));
    else
-      inverse_volume_weights=cumsum(q_weights./inv_vol); 
+      inverse_volume_weights=cumsum(q_weights./inverse_volumes); 
    end
    if joint_method
        if increasing
-           m_lim=R_lim(2);
+           r_lim=r_lim(2);
        else
-           m_lim=R_lim(1);
+           r_lim=r_lim(1);
        end
        W_joint= @(r) 1; 
-       W_joint_inverse=@(r) m_lim;
+       W_joint_inverse=@(r) r_lim;
    end
    
    %looping over methods
@@ -511,7 +559,7 @@ end
 
 
 
-function[dst]=rect_then_square_cont_nonlinear(x,level)
+function[dst]=rect_then_square_nonlinear(x,level)
     sz=size(x);
     d=sz(1);
     n=sz(2);
@@ -534,7 +582,7 @@ end
 
 
 
-function[dst]=rect_then_square_cont(x,level)
+function[dst]=rect_then_square(x,level)
     sz=size(x);
     d=sz(1);
     n=sz(2);
@@ -551,7 +599,7 @@ function[dst]=rect_then_square_cont(x,level)
 end
 
 
-function[dst]=square(x)
+function[dst]=square_function(x)
     sz=size(x);
     d=sz(1);
     n=sz(2);

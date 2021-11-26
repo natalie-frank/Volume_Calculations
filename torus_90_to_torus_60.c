@@ -1,11 +1,12 @@
 /*
 maps the 90 degree torus to the 60 degree torus
-for measuring distances on the 60 degree torus using represenations on the 90
+ 
+Assists with measuring distances on the 60 degree torus using represenations on the 90
 degree torus
 
 The calling syntax is:
  
- 		t = tor_90_to_tor_60(z)
+ 		t = torus_90_to_torus_60(z)
 
 where 
        z = vector of particle positions on the 90 degree torus (2n x 1 column vector)

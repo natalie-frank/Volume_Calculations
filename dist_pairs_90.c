@@ -1,18 +1,19 @@
 /*==========================================================
- * distx2d.c -- calculates distance matrix between points, 
+ * dist_pairs_90.c -- calculates distance matrix between points, 
  *              assuming periodic boundary conditions with 
  *              side length 1. 
  *
  * The calling syntax is:
  *
- *		R = distx2dP(x)
+ *		R = dist_pairs_90(x)
  *
  * where 
- *      x = vector of particle positions (2n x 1 column vector)
+ *      x = vector of particle positions (2n x 1 column vector) odd entries are the x-coordinates and even entries are the y-coordinates
  *      R (output) = n x n distance matrix
  *
  *
- * Note that double arrays are indexed as (row) + (Nrows)*(col)
+ * Note that double arrays within C are indexed as (row) + (Nrows)*(col)
+ *
  *
  *========================================================*/
 /* $Revision: 1.1.10.4 $ */
