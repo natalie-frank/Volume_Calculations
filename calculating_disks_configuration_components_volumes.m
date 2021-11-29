@@ -3,7 +3,7 @@ rng('shuffle')
 
 n=[4];%the number of disks
 component_numbers='all';%can be a list of component numbers or 'all'
-N=100;%number of samples
+N=1000;%number of samples
 burn_in=100;
 reps=10;%number of repitions
 xtype='radius';%what to put on the x-axis: radius or density

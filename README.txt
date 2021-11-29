@@ -3,8 +3,12 @@ Before running any of the files, run the script 'create_mex_functions.m'. This o
 
 The following scripts compute volumes of some interesting shapes along with diagnostic plots
 1. calculating_volumes_simple_shpaes.m -- calculates volumes and produces diagnostic plots for some simple shapes
-2. calculating_disks_partition_function.m -- computes the partition function for the configuration space of n hard disks radius r in a torus
-3. 
+2. calculating_disks_partition_function.m -- computes the partition function for the configuration space of n hard disks radius r in a torus.
+3. calculating_disks_configuration_components_volumes.m --computes the volume of components of the configuration space for n disks radius r in a box. Also produces some diagnostic plots
+4. calculating_volumes_birkhoff_polytope.m--computes the volume of the birkhoff polytope
+5. contingency_tables.m-- the number of nxm contingency tables with specified row and column sums can be used to approximate the volume of transport polytopes. Examples
+    2,3,4 show that this is surprisingly accurate! we can turn this idea on it's head: we can use our volume computation algorithms to approximate the number of contingency tables with given row
+    and column sums (currently not implemented)
 
 
 

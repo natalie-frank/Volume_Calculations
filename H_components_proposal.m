@@ -11,7 +11,7 @@ function [ratio]= H_components_proposal(y,x,k,A,m)
     d=length(x);
     theta=y(d-1);
     x_move=y(d);
-    y_move=maximum_move(y(1:(d-2)),k,m,mod(pi+theta,2*pi),A);
+    y_move=maximum_move_disks(y(1:(d-2)),k,m,mod(pi+theta,2*pi),A);
     if x_move==0
         ratio=1;
     else
