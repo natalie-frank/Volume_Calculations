@@ -10,8 +10,7 @@ function [configurations,radiuses] = get_rigid_configurations(n,type,domain)
 if ~strcmp(domain, 'hex') &&~strcmp(domain,'tor60_on_90') &&~strcmp(domain,'tor60')
     error('invalid domain')
 end
-cptr=computer;
-if strcmp(cptr,'PCWIN64')
+if ispc
     M1=csvread('Disk_Data\Disk_Coordinates.csv',1,0);
 else
     M1=csvread('Disk_Data/Disk_Coordinates.csv',1,0);
@@ -25,7 +24,7 @@ conf1=conf1(ind1);%the cofiguration reference number for all critical configurat
 x=x(ind1);%the x-values that correspond to n disks
 y=y(ind1);%the y-values that corresond to n disks
 
-if strcmp(cptr, 'PCWIN64')
+if ispc
     M2=csvread('Disk_Data\critical_configuration_data.csv',1,0);
 else
     M2=csvread('Disk_Data/critical_configuration_data.csv',1,0);

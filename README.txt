@@ -1,12 +1,16 @@
 
+Before running any of the files, run the script 'create_mex_functions.m'. This only needs to be done once.
+
+The following scripts compute volumes of some interesting shapes along with diagnostic plots
+1. calculating_volumes_simple_shpaes.m -- calculates volumes and produces diagnostic plots for some simple shapes
+2. calculating_disks_partition_function.m -- computes the partition function for the configuration space of n hard disks radius r in a torus
+3. 
 
 
 
 
+The code includes a redistribution of the files 'getCororSet.m'  downloaded from the MATLAB file exchange. The citation for this file 
 
-The code includes a redistribution of the files 'getCororSet.m' and 'save2pdf.m', downloaded from the MATLAB file exchange. The citations for these two files are
-
-Gabe Hoffmann (2021). save2pdf (https://www.mathworks.com/matlabcentral/fileexchange/16179-save2pdf), MATLAB Central File Exchange.
 Diana (2021). Color blind friendly colormap (https://www.mathworks.com/matlabcentral/fileexchange/46802-color-blind-friendly-colormap), MATLAB Central File Exchange. Retrieved November 26, 2021. 
 
 
