@@ -17,10 +17,9 @@ disks60=false;%M(x)\leq r is the configuration space for disks radius r in a 60 
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
 plot_sample_coordinates=true; %do you want to see the plot of the first two coordinates of the samples?
 plot_r_histograms=true; %do you want to see a histogram of the rs?
-rejection_rates=true; %do you want to see a histogram of rejection rates?
+rejection_frequencies=true; %do you want to see a histogram of rejection frequencies?
 fig_numbering=1; %matlab starts numbering figures at this number
 save_figures=true;%if we want to save the figures
-folder='simple_volumes_figures';
 fixed_bins=true;%if we want a fixed number of bins in our histograms
 num_bins=15;% the number of bins we want in our histograms
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,6 +74,7 @@ f_update=@(f,g,N,Hist,r,dst,other)f_update_optimal(f,g,N,Hist,r,dst,other,log_sc
 W_uniform=ones(num_points,1);%uniform weights
 w0=ones(num_points,1); %starting point for adaptive weights
 
+folder='simple_volumes_figures';
 parent_directory='plots_and_data';%we put the directory 'folder' in this directory
 if ispc% file divider on windows vs unix and apple
     slash='\';
@@ -177,7 +177,7 @@ for k=1:length(methods_list)
     S(k).volumes=zeros(num_points,reps);
     
     %initializing matrices to store samples
-    if plot_sample_coordinates || plot_r_histograms || rejection_rates
+    if plot_sample_coordinates || plot_r_histograms || rejection_frequencies
         if strcmp(method, 'joint')
             S(k).samples=zeros(d+1,reps*N);
         else
@@ -186,11 +186,11 @@ for k=1:length(methods_list)
     end
     %intializing vectors that will store booleans representing if a proposal
     %was accepted or not
-    if rejection_rates
+    if rejection_frequencies
         S(k).accepted=false(N*reps,1);
     end
     
-    if plot_r_histograms|| rejection_rates
+    if plot_r_histograms|| rejection_frequencies
         S(k).samples_radiuses=zeros(N*reps,1);
     end
     
@@ -319,7 +319,7 @@ for j=1:length(M_function_list)
         x0=rand(d,1);
         for k=1:length(methods_list)
             method=S(k).method;
-            if ~plot_sample_coordinates && ~plot_r_histograms && ~rejection_rates
+            if ~plot_sample_coordinates && ~plot_r_histograms && ~rejection_frequencies
                 if strcmp(method,'uniform')
                     S(k).volumes(:,i)=volume_marginal(N,burn_in,up,increasing, x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,W_uniform,r);
                 end
@@ -372,7 +372,7 @@ for j=1:length(M_function_list)
       S(k).standard_deviations=standard_deviations;
    end
    %calculating the maximum radius corresponding to each sample
-   if plot_r_histograms|| rejection_rates
+   if plot_r_histograms|| rejection_frequencies
        for k=1:methods_number
             for i=1:reps*N
                 sample=S(k).samples(:,i);
@@ -472,7 +472,7 @@ for j=1:length(M_function_list)
    end
    
    %making a histogram of the rejection rates
-   if rejection_rates
+   if rejection_frequencies
        fig=figure(fig_numbering);
        disp(shape_names{j});
        for k=1:length(methods_list)
@@ -493,7 +493,7 @@ for j=1:length(M_function_list)
        sgtitle(strcat('Rejections--', shape_names{j}))
        if save_figures
            set(fig, 'units', 'inches', 'position', [2 3 7 7])% [left bottom width height]
-           exportgraphics(gca, strcat(folder,slash,strrep(shape_names{j},' ','_'),'_','rejection_hist','_N=', int2str(N),'.pdf')); 
+           exportgraphics(gca, strcat(folder,slash,strrep(shape_names{j},' ','_'),'_','rejection_frequency_hist','_N=', int2str(N),'.pdf')); 
        end
        fig_numbering=fig_numbering+1;
        disp('--')
