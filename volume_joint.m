@@ -64,8 +64,38 @@
 %denominator of our estimator
 
 %accepted is whether or not the proposal was accepted at each monte carlo step
-function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_joint(N,burn_in,up,increasing, x0, next,start_coordinates,p, proposal_function,H,m,M, return_samples,reference_volume,W,W_inverse)
-
+function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_joint(N,burn_in,up,increasing, x0, next,start_coordinates,p, proposal_function,H,m,M, return_samples,reference_volume,W_input,W_inverse_input)
+    if isa(W_input,'function_handle')
+        if ~ isa(W_inverse_input, 'function_handle')
+            error("If W_input is a function handle, W_inverse_input must also be a function handle")
+        end
+        W=W_input;
+        W_inverse=W_inverse_input;
+    else
+       if ~isnumeric(W_input) || ~isempty(W_inverse_input)
+           error("W_input and W_inverse_input should be both function handles, or W_input numeric and W_inverse_input empty")
+       end
+       quadrature_weights=non_uniform_trapezoidal_weights(m);
+       if increasing
+           W_values=flip(cumsum(quadrature_weights./flip(W_input)));
+           diff=flip(quadrature_weights./flip(W_input))/2;
+           diff(length(W_values))=0;%quarature only has half the weight at the endpoints.
+       else
+           W_values=cumsum(quadrature_weights./W_input);
+           diff=quadrature_weights./W_input/2;
+           diff(1)=0;
+       end
+           W_values=W_values-diff;
+           W_values=W_values/max(W_values);
+           W=@(y)trapezoidal_interpolation(m, W_values, y);
+           if increasing
+               W_values_flip=flip(W_values);
+               m_flip=flip(m);
+               W_inverse=@(y)trapezoidal_interpolation(W_values_flip,m_flip,y);
+           else
+               W_inverse=@(y)trapezoidal_interpolation(W_values,m,y);
+           end
+    end
     if increasing
         increasing_multiplier=1;
     else
@@ -82,7 +112,7 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_joint(N,
     W_importance=@(y) increasing_multiplier*M_joint(y)<= increasing_multiplier*y(length(y));
        
                                                           
-    [ratio,samples,numerator_rv,denominator_rv,accepted]  = volume_set_indicators(N,burn_in,up,increasing,x0_joint, next,start_coordinates, proposal_function_joint,H_joint,m,M_joint, return_samples,W_importance,W_estimator);
+    [ratio,samples,numerator_rv,denominator_rv,accepted,~]  = volume_set_indicators(N,burn_in,up,increasing,x0_joint, next,start_coordinates, proposal_function_joint,H_joint,m,M_joint, return_samples,W_importance,W_estimator);
     volume=ratio*reference_volume;
     
     

@@ -3,7 +3,7 @@
 %components_proposal_original
 %TODO define variables
 %points in form [coordinates, theta, x_move]
-function [ratio]= H_components_proposal(y,x,k,A,m)
+function [ratio]= H_components_proposal(y,x,k,m,A)
    %if we get from x to y by moving disk k in a direction with angle theta,
     %we get from y to x by moving disk k in direction -theta
     %note P(x \to y)=1/max_dist(x,k,r,theta,A)

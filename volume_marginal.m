@@ -99,7 +99,7 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_marginal
     end
     W_estimator=@(y)1/W_process(y);
        
-    [ratio,samples,numerator_rv,denominator_rv,accepted]  = volume_set_indicators(N,burn_in,up,increasing,x0, next,start_coordinates, proposal_function,H,m,M, return_samples,W_importance,W_estimator);   
+    [ratio,samples,numerator_rv,denominator_rv,accepted,~]  = volume_set_indicators(N,burn_in,up,increasing,x0, next,start_coordinates, proposal_function,H,m,M, return_samples,W_importance,W_estimator);   
        
 
     volume=ratio*reference_volume;

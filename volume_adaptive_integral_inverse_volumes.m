@@ -119,7 +119,7 @@ function [volume,z,w,samples,accepted] = volume_adaptive_integral_inverse_volume
 %now we take burn_in steps without including them in the calculation
     if burn_in>0
         W=@(y)quadrature_function(m,quadrature_weights,w,M(y));
-        [~,samples,~,~,~]=volume_ratio(burn_in,0,current, next,next_coordinates, proposal_function,H,m,W,W,ind_num,ind_den,true);
+        [~,samples,~,~,~,~]=volume_ratio(burn_in,0,current, next,next_coordinates, proposal_function,H,m,W,W,ind_num,ind_den,true);
         if samples_cell
             sample=samples{burn_in};
         else
@@ -133,11 +133,11 @@ function [volume,z,w,samples,accepted] = volume_adaptive_integral_inverse_volume
         %W=@(y)trapezoidal_interpolation(nodes,w,dist(y));
         %we use 'find_vol_r' to generate samples, we don't care about the
         %volume outputs
-        [~,sample,~,~,acc] = volume_ratio(1,0,current, next,next_coordinates, proposal_function,H,m,W,W,ind_num,ind_den,true);
+        [~,~,~,~,acc,sample] = volume_ratio(1,0,current, next,next_coordinates, proposal_function,H,m,W,W,ind_num,ind_den,true);
         if return_samples
             accepted(j)=acc;
             if samples_cell
-                samples{j}=sample{1};
+                samples{j}=sample;
             else
                 samples(:,j)=sample;
             end

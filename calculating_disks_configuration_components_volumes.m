@@ -1,10 +1,11 @@
 rng('shuffle')
 
 
-n=[4];%the number of disks
+n=[2];%the number of disks
 component_numbers='all';%can be a list of component numbers or 'all'
-N=1000;%number of samples
-burn_in=100;
+N=1440000;%number of samples
+n_umbrella=20;%number of points in discretization of umbrella sampling
+burn_in=100;%burn in time
 reps=10;%number of repitions
 xtype='radius';%what to put on the x-axis: radius or density
 yscale='linear';%log or linear for yscale
@@ -13,6 +14,16 @@ num_points=20;%number of points in our discretization of r
 upper_fraction=1;%can be any number in [0,1] we consider r in [upper_fraction*c,c], where c is the radius of the densest critical configuration
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%which methods we want to use
+marginal=true;
+umbrella=true;
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for plots and data saving
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
 diagnostic_plot_indices=5;%the radiuses at which we want diagnostic plots. Can be either 1. a list of integers between 1 and num_points, with 'auto_space_diagnostic_radiuses' as false
@@ -35,14 +46,31 @@ num_bins=15;% the number of bins we want in our histograms
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%the following are dummy variables, should augment or remove
-marginal=true;
-methods_list=[marginal];
-methods_names={'marginal'};
-methods_number=sum(methods_list);
-plot_labels={'marginal method'};
-all_colors=getColorSet(1);
-colors=all_colors(1,:);
+%labeling our methods and assigning colors
+all_methods_booleans=[marginal umbrella];
+
+
+methods_list={};
+plot_labels={};
+
+methods_number=sum(all_methods_booleans);%number of stochastic methods
+all_colors=getColorSet(methods_number);
+colors=zeros(0,3);
+color_index=1;
+if marginal
+   len=length(methods_list);
+   methods_list{len+1}='marginal';
+   plot_labels{len+1}='marginal method';
+   colors(len+1,:)=all_colors(color_index,:);
+end
+color_index=color_index+1;
+if umbrella
+   len=length(methods_list);
+   methods_list{len+1}='umbrella';
+   plot_labels{len+1}='umbrella sampling';
+   colors(len+1,:)=all_colors(color_index,:);
+end
+color_index=color_index+1;
 %%%%%%%%%%%%%%%%%%%%%%%%
 return_samples=plot_sample_coordinates || plot_r_histograms || rejection_frequencies;
 folder='disks_components_volumes';%location for saving figures and data
@@ -123,6 +151,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %initializing the struct the holds our data
+tic
 for j=length(component_numbers)
     component_number=component_numbers(j);
     critical_r=critical_radiuses(j);
@@ -131,7 +160,7 @@ for j=length(component_numbers)
     for k=1:methods_number
         S(k).n=n;
         S(k).component_number=component_number;
-        S(k).method=methods_names{k};
+        S(k).method=methods_list{k};
         S(k).plot_label=plot_labels{k};
         S(k).volumes=zeros(num_points,reps);%for holding the data
         if plot_sample_coordinates || plot_r_histograms || rejection_frequencies
@@ -161,20 +190,15 @@ for j=length(component_numbers)
         for k=1:methods_number
             method=S(k).method;
             if ~plot_sample_coordinates && ~plot_r_histograms && ~rejection_frequencies
-                if strcmp(method,'marginal')
-                    S(k).volumes(:,i)=volume_disks_components(N,burn_in,critical_configuration,r,60,return_samples, W);
-                end
+                S(k).volumes(:,i)=volume_disks_components(N,burn_in,critical_configuration,r,60,return_samples,S(k).method,n_umbrella, W);
             else
-                if strcmp(method,'marginal')
-                    [S(k).volumes(:,i),samples,~,~,S(k).accepted(:,((i-1)*N+1):(i*N))]=volume_disks_components(N,burn_in,critical_configuration,r,60,return_samples, W);
-                    for ell=1:num_points
-                        if ell<num_points
-                            S(k).samples{ell}(:,((i-1)*N+1):(i*N))=samples{ell};
-                        else
-                            S(k).samples{ell}(:,((i-1)*N+1):(i*N))=repmat(critical_configuration,1,N);
-                        end
+                [S(k).volumes(:,i),samples,~,~,S(k).accepted(:,((i-1)*N+1):(i*N))]=volume_disks_components(N,burn_in,critical_configuration,r,60,return_samples,S(k).method,n_umbrella, W);
+                for ell=1:num_points
+                    if ell<num_points
+                        S(k).samples{ell}(:,((i-1)*N+1):(i*N))=samples{ell};
+                    else
+                        S(k).samples{ell}(:,((i-1)*N+1):(i*N))=repmat(critical_configuration,1,N);
                     end
-                    
                 end
             end
         end
@@ -183,8 +207,10 @@ for j=length(component_numbers)
    standard_deviations=zeros(num_points,1);
    for k=1:methods_number
       mat=S(k).volumes;
-      means=mean(mat,2);
-      standard_deviations=std(mat,1,2);
+      ind=mat==inf;
+      mat(ind)=nan;
+      means=mean(mat,2,'omitnan');
+      standard_deviations=std(mat,1,2,'omitnan');
       S(k).means=means;
       S(k).standard_deviations=standard_deviations;
    end
@@ -199,6 +225,7 @@ for j=length(component_numbers)
            end
        end
    end
+   toc
    %saving the data
    if save_data
        save(strcat(data_folder,slash,base_filename,'n=',num2str(n),'component=',num2str(component_number)),'S');
@@ -206,6 +233,30 @@ for j=length(component_numbers)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %plotting
    %ploting volume vs. r
+   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%to delete
+       [xs,radiuses22] = get_rigid_configurations(2,'radius','tor60_on_90');
+       r_max22=max(radiuses22);
+       r22=linspace(0,r_max22,num_points)';%discretizing radiuses
+       %calculating the exact volumes and volume derivatives
+       ind22=r22>1/4;
+       exact_volumes=zeros(length(r22),1)';
+       exact_volumes(~ind22)=sqrt(3)/2-4*pi*r22(~ind22).^2;
+       exact_volumes(ind22)=sqrt(3)/2-4*pi*r22(ind22).^2+3/2*(16*r22(ind22).^2 .*(acos(1./(4*r(ind22)))')-(sqrt(16*r(ind22).^2-1))');
+       figure(1)
+       hold on;
+       plot(r22,exact_volumes,'Color',all_colors(3,:));
+       hold on;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   
+   
+   
+   
+   
+   
+   
+   
    if volume_vs_r
        fig=figure(fig_numbering);
        set(gca,'YScale', yscale);
@@ -217,7 +268,7 @@ for j=length(component_numbers)
        handles_length=methods_number+1;    
        plot_handles=gobjects(handles_length,1);
        legend_names=cell(handles_length,1);
-       for k=1:length(methods_names)
+       for k=1:length(methods_list)
            legend_names{k}=S(k).plot_label;
            means=S(k).means;
            standard_deviations=S(k).standard_deviations;
@@ -234,7 +285,7 @@ for j=length(component_numbers)
        else
            mult=min(ylim);
        end
-       plot_handles(length(methods_names)+1)=scatter(critical_r,mult, 50,"red",'*');
+       plot_handles(length(methods_list)+1)=scatter(critical_r,mult, 50,"red",'*');
 
 
        %setting the legend
@@ -247,7 +298,7 @@ for j=length(component_numbers)
                loc='northeast';
            end
        end
-       legend_names{length(methods_names)+1}='maximum radius';
+       legend_names{length(methods_list)+1}='maximum radius';
        legend(plot_handles,legend_names,'Location',loc);
        xlabel(xtype);
        ylabel('volume');
@@ -264,7 +315,7 @@ for j=length(component_numbers)
    end
    %plotting the first two coordinates of the samples
    if plot_sample_coordinates
-       for k=1:length(methods_list)
+       for k=1:methods_number
            method_samples=S(k).samples;
            root_ceil=ceil(sqrt(length(diagnostic_plot_indices)));
            fig=figure(fig_numbering);
@@ -303,7 +354,7 @@ for j=length(component_numbers)
    
    %making a histogram of the r-values
    if plot_r_histograms 
-       for k=1:length(methods_list)
+       for k=1:methods_number
            fig=figure(fig_numbering);
            r_lists=S(k).samples_radiuses;
            for i=1:length(diagnostic_plot_indices)
@@ -335,9 +386,9 @@ for j=length(component_numbers)
    
    %making a histogram of the rejection rates
    if rejection_frequencies
-       for k=1:length(methods_list)
+       for k=1:methods_number
            fig=figure(fig_numbering);
-           disp(strcat(S(k).method,', component=',num2str(component_number)));
+           disp(strcat(S(k).method,', ',' component=',num2str(component_number),', n=',num2str(n)));
            accepted_list=S(k).accepted;
            r_lists=S(k).samples_radiuses;
            for i=1:length(diagnostic_plot_indices)
@@ -354,7 +405,7 @@ for j=length(component_numbers)
                title(strcat('radius=',num2str(round(r_current,3))));
                xlabel('r-values');
                ylabel('rejection frequency');
-               disp(strcat('acceptance rate, ',S(k).method,'component number:',component_number,' r',num2str(r_current),': ', num2str(sum(accepted)/(N*reps))));
+               disp(strcat('acceptance rate, ',S(k).method,' r=',num2str(r_current),': ', num2str(sum(accepted)/(N*reps))));
            end
            over_title=strcat(S(k).plot_label,', Rejection frequency--n=', num2str(n),{' '},'component=',num2str(component_number));
            sgtitle(over_title{1})
@@ -368,6 +419,11 @@ for j=length(component_numbers)
    end
     
 end
+
+
+
+
+
 
 
 

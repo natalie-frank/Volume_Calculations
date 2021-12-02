@@ -65,7 +65,7 @@
 %denominator of our estimator
 
 %accepted is whether or not the proposal was accepted at each monte carlo step
-function [ratio,samples,numerator_rv,denominator_rv,accepted]  = volume_set_indicators(N,burn_in,up,increasing,x0, next,start_coordinates, proposal_function,H,m,M, return_samples,W_importance,W_estimator)
+function [ratio,samples,numerator_rv,denominator_rv,accepted,last_sample]  = volume_set_indicators(N,burn_in,up,increasing,x0, next,start_coordinates, proposal_function,H,m,M, return_samples,W_importance,W_estimator)
     len=length(m);    
     if increasing
         increasing_multiplier=1;
@@ -80,7 +80,7 @@ function [ratio,samples,numerator_rv,denominator_rv,accepted]  = volume_set_indi
         denominator_indicator=@(x,mm)increasing_multiplier*M(x)<=increasing_multiplier*mm;
     end
     
-    [ratio,samples,numerator_rv,denominator_rv,accepted]=volume_ratio(N,burn_in,x0, next,start_coordinates,proposal_function,H,m,W_importance,W_estimator, numerator_indicator,denominator_indicator,return_samples); 
+    [ratio,samples,numerator_rv,denominator_rv,accepted,last_sample]=volume_ratio(N,burn_in,x0, next,start_coordinates,proposal_function,H,m,W_importance,W_estimator, numerator_indicator,denominator_indicator,return_samples); 
     
 end
 

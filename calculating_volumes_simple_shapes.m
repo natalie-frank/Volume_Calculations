@@ -1,42 +1,48 @@
 rng('shuffle');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %the possible M(x)'s for which we want plots
-square=true;%M(x)\leq r is an infinity ball radius r centered at .5 times the ones vector
+square=false;%M(x)\leq r is an infinity ball radius r centered at .5 times the ones vector
 rectangle_then_square=false;%for a parameter 'level' (defined later on),  M(x)\leq r is 
                             %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*level and the other side lengths 2*r
                             %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
 rectangle_then_square_nonlinear=false;% %for a parameter 'level' (defined later on),  M(x)\leq r is
                             %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*(r*(1-level)+r^2) and the other side lengths 2*r. The side length 2*(r*(1-level)+r^2) was chosen to make the volume continuous but nonlinear on [0,level]
                             %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
-disks90=false;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
+disks90=true;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
 disks60=false;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for plots
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
-plot_sample_coordinates=true; %do you want to see the plot of the first two coordinates of the samples?
-plot_r_histograms=true; %do you want to see a histogram of the rs?
-rejection_frequencies=true; %do you want to see a histogram of rejection frequencies?
-fig_numbering=1; %matlab starts numbering figures at this number
+plot_sample_coordinates=false; %do you want to see the plot of the first two coordinates of the samples?
+plot_r_histograms=false; %do you want to see a histogram of the rs?
+rejection_frequencies=false; %do you want to see a histogram of rejection frequencies?
+fig_numbering=2; %matlab starts numbering figures at this number
 save_figures=true;%if we want to save the figures
 fixed_bins=true;%if we want a fixed number of bins in our histograms
 num_bins=15;% the number of bins we want in our histograms
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %the following variables toggle which methods we will be comparing
-uniform_method=true; %uniform W
-inverse_derivative_method=true; %weight function proportional to inverse derivative
-antiderivative_inverse_volume_method=true; %weight function proportional to the antiderivative of the inverse weights
-adaptive_antiderivative_inverse_volume_method=true;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
-wang_landau_method=true;%if we want to include the wang-landau method
-joint_method=true;%if we want to include the method that samples in the joint distribution
+marginal_uniform_method=false; %uniform W for the marginal method
+marginal_inverse_derivative_method=false; %weight function proportional to inverse derivative for the marginal method
+umbrella_inverse_derivative_method=false; %weight function proportional to inverse derivative for the umbrella sampling method
+marginal_antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights for the marginal method
+umbrella_antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights for umbrella sampling
+
+%TODO try different functions for joint method
+joint_antiderivative_inverse_volume_method=false;%if we want to include the method that samples in the joint distribution
+joint_inverse_derivative_method=true;
+adaptive_antiderivative_inverse_volume_method=false;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
+wang_landau_method=false;%if we want to include the wang-landau method
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for methods-- one we may want to change
 d=4;%the dimension
 num_points=51;%number of points in our discretization
-N=1000;%number of samples
+N=100000;%number of samples
 burn_in=100;%burn_in_time
 reps=10;%number of repetitions
 step_size=1; %note--optimal for wang-landau in 2d seems to be .1
@@ -58,8 +64,8 @@ p=0.1;%rate of changing r in joint distribution.
 proposal=@(x,k) step_proposal(x,k,step_size);%the proposal function
 
 %for proposing which coordinates to move
-next=@(k)nxt(k,d);%picking the next coordinates to move in gibbs samplers
-start_coordinates=[1,2];%the first coordinates to move in gibbs samplers
+next=@(k)nxt(k,d);%picking the next coordinates to move in the proposal
+start_coordinates=[1,2];%the first coordinates to move in the proposal
 
 
 %some extra parameters for the Wang-Landau method
@@ -117,29 +123,29 @@ if disks60
     shape_names{len+1}='disks60';
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%labeling our methods
-all_methods_booleans=[uniform_method; inverse_derivative_method; antiderivative_inverse_volume_method; adaptive_antiderivative_inverse_volume_method; wang_landau_method; joint_method ];
+%labeling our methods and assigning colors
+all_methods_booleans=[marginal_uniform_method; marginal_inverse_derivative_method; marginal_antiderivative_inverse_volume_method; adaptive_antiderivative_inverse_volume_method; wang_landau_method; joint_antiderivative_inverse_volume_method; joint_inverse_derivative_method ];
 methods_list={};
 plot_labels={};
 methods_number=sum(all_methods_booleans);%number of stochastic methods
-all_colors=getColorSet(methods_number+1);%+1 for analytically finding the volumes
+all_colors=getColorSet(length(all_methods_booleans)+1);%+1 for analytically finding the volumes
 colors=all_colors(1,:);
 color_index=2;
-if uniform_method
+if marginal_uniform_method
    len=length(methods_list);
    methods_list{len+1}='uniform';
    plot_labels{len+1}='uniform weights';
    colors(len+2,:)=all_colors(color_index,:);
 end
 color_index=color_index+1;
-if inverse_derivative_method
+if marginal_inverse_derivative_method
    len=length(methods_list);
    methods_list{len+1}='inverse_derivative';
    plot_labels{len+1}='inverse derivative weights';
    colors(len+2,:)=all_colors(color_index,:);
 end
 color_index=color_index+1;
-if antiderivative_inverse_volume_method
+if marginal_antiderivative_inverse_volume_method
    len=length(methods_list);
    methods_list{len+1}='anti_inverse_volume';
    plot_labels{len+1}='integral inverse volume weights';
@@ -160,10 +166,17 @@ if wang_landau_method
     colors(len+2,:)=all_colors(color_index,:);
 end
 color_index=color_index+1;
-if joint_method
+if joint_antiderivative_inverse_volume_method
     len=length(methods_list);
-    methods_list{len+1}='joint';
-    plot_labels{len+1}='joint distribution';
+    methods_list{len+1}='joint_anti_inverse_volume';
+    plot_labels{len+1}='joint integral inverse volume';
+    colors(len+2,:)=all_colors(color_index,:);
+end
+color_index=color_index+1;
+if joint_inverse_derivative_method
+    len=length(methods_list);
+    methods_list{len+1}='joint_inverse_derivative';
+    plot_labels{len+1}='joint inverse derivative';
     colors(len+2,:)=all_colors(color_index,:);
 end
     
@@ -178,7 +191,7 @@ for k=1:length(methods_list)
     
     %initializing matrices to store samples
     if plot_sample_coordinates || plot_r_histograms || rejection_frequencies
-        if strcmp(method, 'joint')
+        if strcmp(method, 'joint_anti_inverse_volume')|| strcmp(method, 'joint_inverse_derivative')
             S(k).samples=zeros(d+1,reps*N);
         else
             S(k).samples=zeros(d,reps*N);
@@ -295,24 +308,24 @@ for j=1:length(M_function_list)
         wdist=dist;
    end
    inverse_derivative=1./volume_derivative;
-   q_weights=non_uniform_trapezoidal_weights(r);
+   quadrature_weights=non_uniform_trapezoidal_weights(r);
    inverse_volumes=1./exact_volumes;
    indd=inverse_volumes==inf;
-   inverse_volumes(indd)=max(inverse_volumes(~indd))*2;
+   inverse_volumes(indd)=max(inverse_volumes(~indd));
    if increasing
-      inverse_volume_weights=flip(cumsum(q_weights./flip(inverse_volumes)));
+      inverse_volume_weights=flip(cumsum(quadrature_weights./flip(inverse_volumes)));
    else
-      inverse_volume_weights=cumsum(q_weights./inverse_volumes); 
+      inverse_volume_weights=cumsum(quadrature_weights./inverse_volumes); 
    end
-   if joint_method
-       if increasing
-           r_lim=r_lim(2);
-       else
-           r_lim=r_lim(1);
-       end
-       W_joint= @(r) 1; 
-       W_joint_inverse=@(r) r_lim;
-   end
+%    if joint_antiderivative_inverse_volume
+%        if increasing
+%            r_lim=r_lim(2);
+%        else
+%            r_lim=r_lim(1);
+%        end
+%        W_joint_ant= @(r) 1; 
+%        W_joint_inverse=@(r) r_lim;
+%    end
    
    %looping over methods
    for i=1:reps
@@ -335,8 +348,11 @@ for j=1:length(M_function_list)
                 if strcmp(method,'wang_landau')
                     S(k).volumes(:,i)=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume, plot_sample_coordinates,log_scale_calculations);
                 end
-                if strcmp(method,'joint')
-                    S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,W_joint,W_joint_inverse);
+                if strcmp(method,'joint_anti_inverse_volume')
+                    S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_volume_weights,[]);
+                end
+                if strcmp(method,'joint_inverse_derivative')
+                    S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_derivative,[]);
                 end
             else
                 if strcmp(method,'uniform')
@@ -354,8 +370,11 @@ for j=1:length(M_function_list)
                 if strcmp(method,'wang_landau')
                     [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)), S(k).accepted(((i-1)*N+1):(i*N)),~]=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume,true,log_scale_calculations);
                 end
-                if strcmp(method,'joint')
-                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,W_joint,W_joint_inverse);
+                if strcmp(method,'joint_anti_inverse_volume')
+                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,inverse_volume_weights,[]);
+                end
+                if strcmp(method,'joint_inverse_derivative')
+                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,inverse_derivative,[]);
                 end
             end
         end
@@ -377,7 +396,7 @@ for j=1:length(M_function_list)
             for i=1:reps*N
                 sample=S(k).samples(:,i);
                 method=S(k).method;
-                if strcmp(method,'joint')
+                if strcmp(method,'joint_anti_inverse_volume')|| strcmp(method,'joint_inverse_derivative')
                     sample=sample(1:d);
                 end
                 S(k).samples_radiuses(i)=dist(sample);

@@ -1,12 +1,22 @@
 
          %%inputs%%
 %N is the number of samples
-%burn_in is burn in time
+
+%burn_in is burn in time. 
+
 %x0 is a point inside the component
+
 %m is a list of radiuses for which we want to find the volume of the component
+
 %torus is either 60 or 90, for the 60 degree torus and the 90 degree torus
+
 %return_samples is true if the user wants to returns samples,
 %denominator_rv, or accepted
+
+%method is either 'marginal' or 'umbrella', for the marginal method or
+%umbrella sampling
+
+%n_umbrella is the number of ratios to use in umbrella sampling
 
 %there are three options for the last two arguments:
 %1. Just W can be specified, in which case it is assumed to be a
@@ -35,10 +45,9 @@
 %if m in m_list is greater than or equal to the maximum radius at which disks x0 don't overlap, the algorithm will not run-- it will
 %return 0 and leave empty the corresponding entry in samples, numerator_rv,
 %denominator_rv
-function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_disks_components(N,burn_in,x0,m_list,torus,return_samples, W,nodes)
+function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_disks_components(N,burn_in,x0,m_list,torus,return_samples, method,n_umbrella, W,nodes)
     p=inf;%we will be considering 2, infinity group norm
     hidden=2;
-    vol_torus=1;%volume of our torus
     increasing=true;
     up=false;
     if torus==90
@@ -53,8 +62,12 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_disks_co
     else
        error('torus must be either 60 or 90') 
     end
+    if ~strcmp(method,'umbrella')&&~strcmp(method,'marginal')
+            error("method must be 'marginal' or 'umbrella'");
+    end
+    vol_torus=fundamental^(length(x0)/2);%volume of our torus
     proposal_function=@(x,k,m)components_proposal(x,k,m,A);
-    H=@(x,y,k,m)H_components_proposal(x,y,k,A,m);
+    H=@(x,y,k,m)H_components_proposal(x,y,k,m,A);
     %the next block of code processes W_in which will later be used to
     %define W
     if isa(W,'cell')
@@ -73,16 +86,23 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_disks_co
     
     %preallocating the output variables
     if return_samples
-        denominator_rv=zeros(len,N);
+        if strcmp(method,'marginal')
+            denominator_rv=zeros(len,N);
+            numerator_rv=zeros(len,N);
+        else
+            numerator_rv=[];
+            denominator_rv=[];
+        end
         accepted=false(len,N);
         samples=cell(len,1);
+        samp=zeros(d+2,N);
+        
     else
         denominator_rv=[];
         accepted=[];
         samples=[];
     end
-
-      
+    
    
     for k=1:len
         m=m_list(k);
@@ -94,31 +114,55 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_disks_co
         
         m_constraint=max(M_shape(x0)-m,0);
         if m_constraint<=5*eps %we use 5*eps instead of 0 to guard against numerical error
-             volume(k)=0;
+            volume(k)=0;
         else
             x0_m=x0;
             x0_m(1)=x0_m(1)+m_constraint/2;%we can't start at x0 because that point has zero weight
-            reference_volume=(pi*m_constraint^2)^n*(vol_torus/fundamental)^n; 
+            reference_volume=(pi*m_constraint^2)^n*(vol_torus/fundamental)^n;
             x0_m((d+1):(d+hidden))=zeros(hidden,1);
             proposal_function_m=@(x,k)proposal_function(x,k,m);
             H_m=@(x,y,k)H(x,y,k,m);
             M_constraint=@(x)group_norm(x(1:d),x0,p,M_shape);
-            if exist('nodes','var')
-                if return_samples
-                    [volume(k),samp,numerator_rv,denominator_rv(k,:),accepted(k,:)]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m,nodes);%finds the mean ratio ind_num/ind_den for the parameters given
-                else
-                    [volume(k),~,~,~,~]=volume_marginal(N,burn_in,up, increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint,return_samples,reference_volume, W_m,nodes); %finds the mean ratio ind_num/ind_den for the parameters given
-                end
-            else
-                if return_samples
-                    [volume(k),samp,numerator_rv,denominator_rv(k,:),accepted(k,:)]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m); %finds the mean ratio ind_num/ind_den for the parameters given
-                else
-                    [volume(k),~,~,~,~]= volume_marginal(N,burn_in,up, increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint,return_samples,reference_volume, W_m);%finds the mean ratio ind_num/ind_den for the parameters given
-                end
+            if strcmp(method,'umbrella')
+                m_umbrella=linspace(m,max(m_list),n_umbrella)';
+                Ns=get_Ns_umbrella(N,m_umbrella,increasing, W);
+                burn_ins=zeros(length(Ns),1);
+                burn_ins(1)=burn_in;
             end
             if return_samples
-                samples{k}=samp(1:d,:);
+                if strcmp(method,'marginal')
+                    if exist('nodes','var')
+                        [volume(k),samp,numerator_rv,denominator_rv(k,:),accepted(k,:)]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m,nodes);%finds the mean ratio ind_num/ind_den for the parameters given
+                    else
+                        [volume(k),samp,numerator_rv,denominator_rv(k,:),accepted(k,:)]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m); %finds the mean ratio ind_num/ind_den for the parameters given
+                    end
+                elseif strcmp(method,'umbrella')
+                    [vls,smp,ratios,acpt]=volume_umbrella_sampling(Ns,burn_ins,up,increasing,x0_m, next,start_coordinates, proposal_function,H,m_umbrella,M_constraint, return_samples,reference_volume);
+                    volume(k)=vls(length(m_umbrella));
+                    bottom_index=1;
+                    for j=1:length(Ns)
+                        Nj=Ns(j);
+                        top_index=bottom_index+Nj-1;
+                        samp(:,bottom_index:top_index)=smp{j};
+                        accepted(k,bottom_index:top_index)=acpt{j};
+                        bottom_index=top_index+1;
+                    end
+                end
+            else
+                if strcmp(method,'marginal')
+                    if exist('nodes','var')
+                        [volume(k),~,~,~,~]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m,nodes);%finds the mean ratio ind_num/ind_den for the parameters given
+                    else
+                        [volume(k),~,~,~,~]=volume_marginal(N,burn_in,up,increasing,x0_m,next,start_coordinates, proposal_function_m,H_m,m_constraint,M_constraint, return_samples,reference_volume,W_m); %finds the mean ratio ind_num/ind_den for the parameters given
+                    end    
+                elseif strcmp(method,'umbrella')
+                    [vls,~,~,~]=volume_umbrella_sampling(Ns,burn_ins,up,increasing,x0_m, next,start_coordinates, proposal_function,H,m_umbrella,M_constraint, return_samples,reference_volume);
+                    volume(k)=vls(n_umbrella);
+                end
             end
+        end
+        if return_samples
+            samples{k}=samp(1:d,:);
         end
     end
 end

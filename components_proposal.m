@@ -4,7 +4,6 @@ function [y] = components_proposal(x,k,m,A)
     x_disks=x(1:(d-2));
     theta=rand(1,1)*2*pi;%TODO is this the best way to distribute theta? I suspect this is optimal because it undoes the condition number. warning: changing this will also change H
     x_move=maximum_move_disks(x_disks,k,m,theta,A); %calculating the maximum distance disk k could travel before hitting another disk, (bounded above by some constant)
-    %TODO remove opt (true here)
     
     rr=x_move*(rand(1,1)); %randomly picking a distance to move
     delta=rr*[cos(theta);sin(theta)];

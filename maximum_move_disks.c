@@ -327,7 +327,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 //Get and check the second input
     if(!mxIsDouble(prhs[1]))
     {
-        mexErrMsgIdAndTxt( "MATLAB:max_dist:diskIndicesNotInteger", "The disk inices must be two Integers");
+        mexErrMsgIdAndTxt( "MATLAB:max_dist:diskIndicesNotInteger", "The disk indices must be two Integers");
     }
 
     

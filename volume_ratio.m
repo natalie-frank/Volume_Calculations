@@ -69,7 +69,7 @@
 %denominator of our estimator
 
 %accepted is whether or not the proposal was accepted at each monte carlo step
-function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_ratio(N,burn_in,x0, next,start_coordinates,proposal_function,H,m,W_importance,W_estimator, numerator_indicator,denominator_indicator,return_samples)
+function [volume,samples,numerator_rv,denominator_rv,accepted,last_sample] = volume_ratio(N,burn_in,x0, next,start_coordinates,proposal_function,H,m,W_importance,W_estimator, numerator_indicator,denominator_indicator,return_samples)
     %here we determine is we should return samples is a cell array or a
     %matrix
     %specifcially, we use a matrix if the samples are column vectors and
@@ -151,4 +151,5 @@ function [volume,samples,numerator_rv,denominator_rv,accepted] = volume_ratio(N,
     else
         volume=numerator_sum./denominator_sum;
     end
+    last_sample=current;
 end
