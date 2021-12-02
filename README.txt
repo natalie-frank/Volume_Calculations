@@ -9,6 +9,12 @@ The following scripts compute volumes of some interesting shapes along with diag
 5. contingency_tables.m-- the number of nxm contingency tables with specified row and column sums can be used to approximate the volume of transport polytopes. Examples
     2,3,4 show that this is surprisingly accurate! we can turn this idea on it's head: we can use our volume computation algorithms to approximate the number of contingency tables with given row
     and column sums (currently not implemented)
+	
+The following files implement the volume methods
+1. volume_marginal.m
+2. volume_joint.m
+3. volume_wang_landau.m
+4. volume_umbrella_sampling.m
 
 
 

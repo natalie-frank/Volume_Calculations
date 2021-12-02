@@ -1,4 +1,5 @@
-rng('shuffle');
+%rng('shuffle');
+rng(5);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %the possible M(x)'s for which we want plots
 square=false;%M(x)\leq r is an infinity ball radius r centered at .5 times the ones vector
@@ -8,17 +9,17 @@ rectangle_then_square=false;%for a parameter 'level' (defined later on),  M(x)\l
 rectangle_then_square_nonlinear=false;% %for a parameter 'level' (defined later on),  M(x)\leq r is
                             %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*(r*(1-level)+r^2) and the other side lengths 2*r. The side length 2*(r*(1-level)+r^2) was chosen to make the volume continuous but nonlinear on [0,level]
                             %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
-disks90=true;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
-disks60=false;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
+disks90=false;%M(x)\leq r the configuration space for disks radius r in a 90 degree torus
+disks60=true;%M(x)\leq r is the configuration space for disks radius r in a 60 degree torus 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parameters for plots
 volume_vs_r=true; %do you want to see the plot of volume vs. r?
-plot_sample_coordinates=false; %do you want to see the plot of the first two coordinates of the samples?
-plot_r_histograms=false; %do you want to see a histogram of the rs?
-rejection_frequencies=false; %do you want to see a histogram of rejection frequencies?
-fig_numbering=2; %matlab starts numbering figures at this number
+plot_sample_coordinates=true; %do you want to see the plot of the first two coordinates of the samples?
+plot_r_histograms=true; %do you want to see a histogram of the rs?
+rejection_frequencies=true; %do you want to see a histogram of rejection frequencies?
+fig_numbering=4; %matlab starts numbering figures at this number
 save_figures=true;%if we want to save the figures
 fixed_bins=true;%if we want a fixed number of bins in our histograms
 num_bins=15;% the number of bins we want in our histograms
@@ -26,13 +27,11 @@ num_bins=15;% the number of bins we want in our histograms
 %the following variables toggle which methods we will be comparing
 marginal_uniform_method=false; %uniform W for the marginal method
 marginal_inverse_derivative_method=false; %weight function proportional to inverse derivative for the marginal method
-umbrella_inverse_derivative_method=false; %weight function proportional to inverse derivative for the umbrella sampling method
 marginal_antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights for the marginal method
-umbrella_antiderivative_inverse_volume_method=false; %weight function proportional to the antiderivative of the inverse weights for umbrella sampling
+umbrella_antiderivative_inverse_volume_method=true; %weight function proportional to the antiderivative of the inverse weights for umbrella sampling
 
-%TODO try different functions for joint method
 joint_antiderivative_inverse_volume_method=false;%if we want to include the method that samples in the joint distribution
-joint_inverse_derivative_method=true;
+joint_inverse_derivative_method=false;
 adaptive_antiderivative_inverse_volume_method=false;%adaptive method converging to weights proportional to the antiderivative of the inverse weights
 wang_landau_method=false;%if we want to include the wang-landau method
 
@@ -46,7 +45,7 @@ N=100000;%number of samples
 burn_in=100;%burn_in_time
 reps=10;%number of repetitions
 step_size=1; %note--optimal for wang-landau in 2d seems to be .1
-level=.3;%for the rectangle_then_square/rectangle_then_square_nonlinear shapes, the r at which M(x)\leq r switches from being a rectangle to a square
+level=.25;%for the rectangle_then_square/rectangle_then_square_nonlinear shapes, the r at which M(x)\leq r switches from being a rectangle to a square
 forget_rate_anti_adaptive=10^-8;%rate parameter for the inverse volumes method
 p=0.1;%rate of changing r in joint distribution.
 
@@ -65,7 +64,8 @@ proposal=@(x,k) step_proposal(x,k,step_size);%the proposal function
 
 %for proposing which coordinates to move
 next=@(k)nxt(k,d);%picking the next coordinates to move in the proposal
-start_coordinates=[1,2];%the first coordinates to move in the proposal
+start_coordinates=[1];%the first coordinates to move in the proposal. for the umbrella sampling methods, only 1-dimensional 'start_coordinates' has been implemented
+
 
 
 %some extra parameters for the Wang-Landau method
@@ -124,7 +124,7 @@ if disks60
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %labeling our methods and assigning colors
-all_methods_booleans=[marginal_uniform_method; marginal_inverse_derivative_method; marginal_antiderivative_inverse_volume_method; adaptive_antiderivative_inverse_volume_method; wang_landau_method; joint_antiderivative_inverse_volume_method; joint_inverse_derivative_method ];
+all_methods_booleans=[marginal_uniform_method; marginal_inverse_derivative_method; marginal_antiderivative_inverse_volume_method; adaptive_antiderivative_inverse_volume_method; wang_landau_method; joint_antiderivative_inverse_volume_method; joint_inverse_derivative_method; umbrella_antiderivative_inverse_volume_method; ];
 methods_list={};
 plot_labels={};
 methods_number=sum(all_methods_booleans);%number of stochastic methods
@@ -179,6 +179,13 @@ if joint_inverse_derivative_method
     plot_labels{len+1}='joint inverse derivative';
     colors(len+2,:)=all_colors(color_index,:);
 end
+color_index=color_index+1;
+if umbrella_antiderivative_inverse_volume_method
+    len=length(methods_list);
+    methods_list{len+1}='umbrella_anti_inverse_volume';
+    plot_labels{len+1}='umbrella integral inverse volume';
+    colors(len+2,:)=all_colors(color_index,:);
+end
     
 %initializing the struct for storing the data
 for k=1:length(methods_list)
@@ -190,18 +197,18 @@ for k=1:length(methods_list)
     S(k).volumes=zeros(num_points,reps);
     
     %initializing matrices to store samples
+    %and vectors that will store booleans representing if a proposal
+    %was accepted or not
     if plot_sample_coordinates || plot_r_histograms || rejection_frequencies
         if strcmp(method, 'joint_anti_inverse_volume')|| strcmp(method, 'joint_inverse_derivative')
             S(k).samples=zeros(d+1,reps*N);
         else
             S(k).samples=zeros(d,reps*N);
         end
-    end
-    %intializing vectors that will store booleans representing if a proposal
-    %was accepted or not
-    if rejection_frequencies
         S(k).accepted=false(N*reps,1);
     end
+
+
     
     if plot_r_histograms|| rejection_frequencies
         S(k).samples_radiuses=zeros(N*reps,1);
@@ -229,9 +236,10 @@ for j=1:length(M_function_list)
       up=true;%our reference volume is the largest shape
       increasing=true;
       exact_volumes=(2*r).^d;
-      inverse_volume_weights=r.^(-d+1);
+      anti_inverse_volume_weights=r.^(-d+1);
       volume_derivative=2*d*(2*r).^(d-1);
       r_lim=[0,1/2];%upper and lower limits on r
+      proposal_umbrella=@square_hit_and_run;
    elseif isequal(dist,rect_square_handle)
        reference_volume=1;%reference volume
        r=linspace(0,0.5,num_points)'; %discretizing radiuses
@@ -244,6 +252,7 @@ for j=1:length(M_function_list)
        exact_volumes(~ind)=(2*(r(~ind))).^d;
        volume_derivative(~ind)=2*d*(2*r(~ind)).^(d-1);
        r_lim=[0,1/2];%upper and lower limits on r
+       proposal_umbrella=@(x,k,m)rect_then_square_hit_and_run(x,k,m,level);
    elseif isequal(dist,rect_square_nonlinear_handle)
        reference_volume=1;%reference volume
        r=linspace(0,0.5,num_points)'; %discretizing radiuses
@@ -263,6 +272,7 @@ for j=1:length(M_function_list)
        volume_derivative(ind)=volume_rectangle_derivative(ind);
        volume_derivative(~ind)=volume_square_derivative(~ind);
        r_lim=[0,1/2];%upper and lower limits on r
+       proposal_umbrella=@(x,k,m)rect_then_square_nonlinear_hit_and_run(x,k,m,level);
    elseif isequal(dist, @dist_90)
        reference_volume=1;%reference volume
        r_max=sqrt(2)/4;%discretizing the radiuses
@@ -281,6 +291,8 @@ for j=1:length(M_function_list)
        volume_derivative(ind)= volume_derivative(ind)-32*r_above.*acos(1./(4*r_above))-4./sqrt(1-1./(4*r_above).^2)+16*r_above./sqrt(16*r_above.^2-1);
        volume_derivative=max(volume_derivative,0);
        r_lim=[0,r_max];%upper and lower limits on r
+       A=eye(2,2);
+       proposal_umbrella=@(x,k,m)disks_single_coordinate_hit_and_run(x,k,m,A);
    elseif isequal(dist,@dist_60)
        reference_volume=sqrt(3)/2;%reference volume
        if d~=4
@@ -301,6 +313,9 @@ for j=1:length(M_function_list)
        volume_derivative(1)=0;
        volume_derivative(num_points)=0;
        r_lim=[0,r_max];%limits on r
+       A=[1 1/2;
+          0 sqrt(3)/2];
+       proposal_umbrella=@(x,k,m)disks_single_coordinate_hit_and_run(x,k,m,A);
    end
    if WL_dist_discrete
         wdist=@(x)discretize(dist(x),r);
@@ -313,23 +328,34 @@ for j=1:length(M_function_list)
    indd=inverse_volumes==inf;
    inverse_volumes(indd)=max(inverse_volumes(~indd));
    if increasing
-      inverse_volume_weights=flip(cumsum(quadrature_weights./flip(inverse_volumes)));
+      anti_inverse_volume_weights=flip(cumsum(quadrature_weights./flip(inverse_volumes)));
    else
-      inverse_volume_weights=cumsum(quadrature_weights./inverse_volumes); 
+      anti_inverse_volume_weights=cumsum(quadrature_weights./inverse_volumes); 
    end
-%    if joint_antiderivative_inverse_volume
-%        if increasing
-%            r_lim=r_lim(2);
-%        else
-%            r_lim=r_lim(1);
-%        end
-%        W_joint_ant= @(r) 1; 
-%        W_joint_inverse=@(r) r_lim;
-%    end
-   
+   Ns_anti_inverse_volumes=get_Ns_umbrella(N,r,increasing, anti_inverse_volume_weights);
+   burn_ins_anti_inverse_volumes=zeros(length(Ns_anti_inverse_volumes),1);
+   if increasing
+        burn_ins_anti_inverse_volumes(1)=burn_in;
+   else
+       burn_ins_anti_inverse_volumes(length(Ns_anti_inverse_volumes))=burn_in;
+   end
+   if umbrella_antiderivative_inverse_volume_method
+       if isequal(dist,@dist_60)||isequal(dist,@dist_90)
+           dist_umbrella=@(x)dist(x(1:(length(x)-2)));
+           H_umbrella=@(y,x,k,m)H_umbrella_disks(y,x,k,m,A);
+       else
+           dist_umbrella=dist;
+           H_umbrella=@(y,x,k,m)1;
+       end
+   end
    %looping over methods
    for i=1:reps
         x0=rand(d,1);
+        if isequal(dist,@dist_60)||isequal(dist,@dist_90)
+            x0_umbrella=[x0;0;0];
+        else
+            x0_umbrella=x0;
+        end
         for k=1:length(methods_list)
             method=S(k).method;
             if ~plot_sample_coordinates && ~plot_r_histograms && ~rejection_frequencies
@@ -337,7 +363,7 @@ for j=1:length(M_function_list)
                     S(k).volumes(:,i)=volume_marginal(N,burn_in,up,increasing, x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,W_uniform,r);
                 end
                 if strcmp(method,'anti_inverse_volume')
-                    S(k).volumes(:,i)=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_volume_weights,r);
+                    S(k).volumes(:,i)=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,anti_inverse_volume_weights,r);
                 end
                 if  strcmp(method,'inverse_derivative')
                     S(k).volumes(:,i)=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_derivative,r);
@@ -349,17 +375,20 @@ for j=1:length(M_function_list)
                     S(k).volumes(:,i)=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume, plot_sample_coordinates,log_scale_calculations);
                 end
                 if strcmp(method,'joint_anti_inverse_volume')
-                    S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_volume_weights,[]);
+                    S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,anti_inverse_volume_weights,[]);
                 end
                 if strcmp(method,'joint_inverse_derivative')
                     S(k).volumes(:,i)=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist, plot_sample_coordinates,reference_volume,inverse_derivative,[]);
+                end
+                if strcmp(method,'umbrella_anti_inverse_volume')
+                   S(k).volumes(:,i)=volume_umbrella_sampling(Ns_anti_inverse_volumes,burn_ins_anti_inverse_volumes,up,increasing,x0_umbrella, next,start_coordinates, proposal_umbrella,H_umbrella,r,dist_umbrella, false,reference_volume); 
                 end
             else
                 if strcmp(method,'uniform')
                     [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~,S(k).accepted(((i-1)*N+1):(i*N))]=volume_marginal(N,burn_in,up,increasing, x0, next,start_coordinates, proposal,@H,r,dist, true,reference_volume,W_uniform,r);
                 end
                 if strcmp(method,'anti_inverse_volume')
-                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~,S(k).accepted(((i-1)*N+1):(i*N))]=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, true,reference_volume,inverse_volume_weights,r);
+                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~,S(k).accepted(((i-1)*N+1):(i*N))]=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, true,reference_volume,anti_inverse_volume_weights,r);
                 end
                 if strcmp(method,'inverse_derivative')
                     [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~,S(k).accepted(((i-1)*N+1):(i*N))]=volume_marginal(N,burn_in,up,increasing,x0, next,start_coordinates, proposal,@H,r,dist, true,reference_volume,inverse_derivative,r);
@@ -371,10 +400,29 @@ for j=1:length(M_function_list)
                     [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)), S(k).accepted(((i-1)*N+1):(i*N)),~]=volume_wang_landau(N,increasing,x0,start_coordinates,next,proposal,@H,f_update,r,wdist,reference_volume,true,log_scale_calculations);
                 end
                 if strcmp(method,'joint_anti_inverse_volume')
-                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,inverse_volume_weights,[]);
+                    [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,anti_inverse_volume_weights,[]);
                 end
                 if strcmp(method,'joint_inverse_derivative')
                     [S(k).volumes(:,i),S(k).samples(:,((i-1)*N+1):(i*N)),~,~, S(k).accepted(((i-1)*N+1):(i*N))]=volume_joint(N,burn_in,up,increasing,x0, next,start_coordinates,p, proposal,@H,r,dist,true,reference_volume,inverse_derivative,[]);
+                end
+                if strcmp(method,'umbrella_anti_inverse_volume')
+                   [S(k).volumes(:,i),smp,~,acpt]=volume_umbrella_sampling(Ns_anti_inverse_volumes,burn_ins_anti_inverse_volumes,up,increasing,x0_umbrella, next,start_coordinates, proposal_umbrella,H_umbrella,r,dist_umbrella, true,reference_volume); 
+                   accepted_temp=false(N,1);
+                   if isequal(dist,@dist_60)||isequal(dist,@dist_90)                      
+                       samples_temp=zeros(d+2,N);
+                   else
+                       samples_temp=zeros(d,N);
+                   end
+                   bottom_index=1;
+                   for ell=1:length(Ns_anti_inverse_volumes)
+                        N_temp=Ns_anti_inverse_volumes(ell); 
+                        top_index=bottom_index+N_temp-1;
+                        samples_temp(:,bottom_index:top_index)=smp{ell};
+                        accepted_temp(bottom_index:top_index)=acpt{ell};
+                        bottom_index=top_index+1;
+                   end
+                   S(k).accepted(((i-1)*N+1):(i*N))=accepted_temp;
+                   S(k).samples(:,((i-1)*N+1):(i*N))=samples_temp(1:d,:);
                 end
             end
         end
@@ -608,4 +656,77 @@ end
 function [rounded]=discretize(x,r)
     index=find(r>x,1,'first');
     rounded=r(index);
+end
+function[y]=disks_single_coordinate_hit_and_run(x,k,m,A)
+    if k==1
+        disk=[1;2];
+        theta=0;
+    elseif k==2
+        disk=[1;2];
+        theta=pi/2;
+    elseif k==3
+        disk=[3;4];
+        theta=0;
+    else
+        disk=[3;4];
+        theta=pi/2;
+    end
+%     d=length(x);
+%     y=zeros(d,1);
+%     x_disks=x(1:(d-2));
+%     x_move=maximum_move_disks(x_disks,disk,m,theta,A); %calculating the maximum distance disk k could travel before hitting another disk, (bounded above by some constant)
+%     
+%     rr=x_move*(rand(1,1)); %randomly picking a distance to move
+%     delta=rr*[cos(theta);sin(theta)];
+%     y(1:(d-2))=x_disks;
+%     y(disk)=mod(y(disk)+delta,1);%moving disk 'disk'
+%     y(d-1)=theta;
+%     y(d)=x_move; 
+    y=components_proposal(x,disk,m,A);
+end
+
+function [ratio]=H_umbrella_disks(y,x,k,m,A)
+    if k==1||k==2
+        disk=[1 ;2];
+    else
+        disk=[3;4];
+    end
+    ratio=H_components_proposal(y,x,disk,m,A);
+end
+
+function[y]=rect_then_square_nonlinear_hit_and_run(x,k,m,level)
+                            %1. if r\leq level, a hyperrectangle centered at 0.5 times the ones vector with one side length 2*(r*(1-level)+r^2) and the other side lengths 2*r. The side length 2*(r*(1-level)+r^2) was chosen to make the volume continuous but nonlinear on [0,level]
+                            %2. if r\geq level, an infinity ball centered at 0.5 times the ones vector for r\geq level
+    if m>=level
+        y=square_hit_and_run(x,k,m);
+    else
+        d=length(x);
+        y=x;
+        if k~=1
+            y(k)=2*m*(rand(1,1))+(.5-m);
+        else
+            side_length=2*(m*(1-level)+m^2);
+            y(1)=side_length*rand(1,1)+.5-side_length/2;
+            y(2:d)=x(2:d);
+        end
+    end
+end
+function [y]=rect_then_square_hit_and_run(x,k,m,level)
+    if m>=level
+       y=square_hit_and_run(x,k,m);
+    else
+        d=length(x);
+        y=x;
+        if k~=1
+            y(k)=2*m*(rand(1,1))+(.5-m);
+        else
+            y(1)=2*level*rand(1,1)+.5-level;
+            y(2:d)=x(2:d);
+        end
+    end
+end
+
+function [y]=square_hit_and_run(x,k,m)
+    y=x;
+    y(k)=2*m*(rand(1,1))+(.5-m);
 end
